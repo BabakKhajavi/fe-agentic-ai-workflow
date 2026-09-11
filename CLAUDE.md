@@ -40,7 +40,9 @@ Before planning or implementing application changes, read:
 
 ## Sources of truth
 
-1. Confluence is the source of product intent.
+1. Product intent originates from Confluence, a Jira ticket, or a
+   developer-provided requirement description, depending on how the feature
+   was intaken.
 2. The local SDD artifacts are the source of implementation truth.
 3. Jira tracks implementation work only after the local plan is approved.
 4. The `smooth-web` repositories contain the implementation produced from the

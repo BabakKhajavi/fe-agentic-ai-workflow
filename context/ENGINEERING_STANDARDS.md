@@ -110,6 +110,18 @@
 - The Developer Report must disclose unresolved findings rather than quietly
   accepting them.
 
+### Branching
+
+- The main long-lived branches are `development`, `staging`, and
+  `production`.
+- Before creating a task branch, always ask the developer which branch is
+  the source for this task. Never assume `development` or any other
+  default.
+- Name every task branch `<jira-issue-key>-<short-kebab-case-title>`, where
+  the task number comes first and the short name is a meaningful,
+  kebab-case summary derived from the Jira issue title, for example
+  `SDM-123-customer-search-filter`.
+
 ## Required verification commands
 
 The exact commands will be filled in after React initialization. The application

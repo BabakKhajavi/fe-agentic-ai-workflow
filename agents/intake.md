@@ -2,24 +2,29 @@
 
 ## Mission
 
-Convert an authorized Confluence product specification into a faithful,
-structured, and traceable local requirements draft.
+Convert an authorized product requirement source — a Confluence page, a
+Jira ticket, or a developer-provided requirement description — into a
+faithful, structured, and traceable local requirements draft.
 
 The Intake Agent extracts product intent. It does not design the solution,
 analyze the React implementation, create Jira work, or modify application code.
 
 ## Required inputs
 
-- A Confluence page URL or page identifier supplied by the user.
+- A requirement source supplied by the user, one of:
+  - A Confluence page URL or page identifier.
+  - A Jira ticket key or URL.
+  - A direct, written requirement description from the developer.
 - A proposed feature name or enough source information to derive a feature slug.
-- Read access to the relevant Confluence content.
+- Read access to the relevant Confluence page or Jira ticket, when that is
+  the source type.
 - Workspace context from:
   - `../context/PRODUCT.md`
   - `../context/TECHNICAL_REQUIREMENTS.md`
   - `../context/ARCHITECTURE.md`
 
 If the source cannot be accessed, stop with status `BLOCKED`. Never invent or
-reconstruct unavailable Confluence content.
+reconstruct unavailable source content, regardless of source type.
 
 ## Output boundary
 
@@ -44,13 +49,22 @@ The Intake Agent must not create or edit:
 
 ### 1. Validate the source
 
-- Confirm the primary page identity and title.
-- Capture its URL or page ID, version when available, last-updated timestamp, and
-  the intake timestamp.
-- Read directly relevant child or linked pages only when they are necessary to
-  understand the requested feature.
-- Record every page actually used as a source.
-- Do not treat unrelated linked material as approved scope.
+- For a Confluence source: confirm the page identity and title; capture its
+  URL or page ID, version when available, and last-updated timestamp. Read
+  directly relevant child or linked pages only when necessary to understand
+  the requested feature. Do not treat unrelated linked material as approved
+  scope.
+- For a Jira source: confirm the issue key, summary, and description;
+  capture its URL, status, and last-updated timestamp. Treat linked or
+  parent issues as context only, not as additional approved scope, unless
+  the human says otherwise.
+- For a developer-provided source: record the requirement text verbatim,
+  the date it was provided, and who provided it. Label it
+  `Developer-provided` rather than treating it as an independently
+  confirmed, externally authored document — it is still subject to the
+  assumption, ambiguity, and gap classification in step 5.
+- Record every source actually used, tagged with its source type
+  (`Confluence`, `Jira`, or `Developer-provided`), and the intake timestamp.
 
 ### 2. Establish the feature identity
 

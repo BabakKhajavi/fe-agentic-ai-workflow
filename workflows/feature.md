@@ -2,7 +2,9 @@
 
 ## Stage 1 — Intake
 
-1. A human supplies an authorized Confluence page URL or identifier.
+1. A human supplies a requirement source: an authorized Confluence page URL
+   or identifier, a Jira ticket key or URL, or a direct developer-written
+   requirement description.
 2. Run the role defined in `../agents/intake.md`.
 3. The Intake Agent creates only:
 
@@ -86,11 +88,16 @@ the Developer Agent.
    issue reference.
 3. The Developer Agent verifies approvals and maps the issue to exactly one
    `TASK-*` item before editing.
-4. It modifies only the selected task's approved scope under the relevant
+4. The Developer Agent asks the human which branch (`development`,
+   `staging`, `production`, or another named branch) is the source for this
+   task, then creates a branch named
+   `<jira-issue-key>-<short-kebab-case-title>` from that source before
+   editing any files.
+5. It modifies only the selected task's approved scope under the relevant
    `../../smooth-web/smooth-web-*/` repository and adds the required tests.
-5. It runs task-specific checks followed by available type checking, linting,
+6. It runs task-specific checks followed by available type checking, linting,
    tests, and the repository's configured production build.
-6. It returns the evidence described in
+7. It returns the evidence described in
    `../templates/DEVELOPER_REPORT.template.md` with status `READY_FOR_REVIEW`,
    `BLOCKED`, or `PLAN_MISMATCH`.
 

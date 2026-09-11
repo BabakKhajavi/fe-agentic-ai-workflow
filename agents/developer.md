@@ -54,6 +54,10 @@ request Planner/Architect review; do not silently redesign the solution.
 
 The Developer Agent may:
 
+- Ask the human developer which branch (`development`, `staging`,
+  `production`, or another named branch) is the source for this task, then
+  create and check out a new branch from that source before editing any
+  files.
 - Modify files under the relevant `../../smooth-web/smooth-web-*/` repository
   required by the selected task.
 - Add or update dependencies explicitly approved by `IMPACT.md` and `PLAN.md`.
@@ -120,15 +124,19 @@ The Developer Agent must not:
 
 1. State the selected Jira issue, mapped `TASK-*`, planned scope, and applicable
    `REQ-*`, `AC-*`, `CON-*`, and `TECH-*` IDs.
-2. Inspect before editing and name any repository mismatch.
-3. Implement only the selected task.
-4. Review the diff for accidental or unrelated changes.
-5. Run the task-specific tests first.
-6. Run the repository's available `typecheck`, `lint`, `test`, and `build`
+2. Ask the human which branch is the source for this task. Create and check
+   out a new branch from that source named
+   `<jira-issue-key>-<short-kebab-case-title>`, where the short name is
+   derived from the Jira issue title. Do this before editing any files.
+3. Inspect before editing and name any repository mismatch.
+4. Implement only the selected task.
+5. Review the diff for accidental or unrelated changes.
+6. Run the task-specific tests first.
+7. Run the repository's available `typecheck`, `lint`, `test`, and `build`
    scripts when the task is ready for review.
-7. Inspect the Webpack build output when the task affects lazy-loaded routing or
+8. Inspect the Webpack build output when the task affects lazy-loaded routing or
    bundle behavior.
-8. Fix in-scope failures and rerun the relevant checks.
+9. Fix in-scope failures and rerun the relevant checks.
 
 If a required script does not exist, report it as a verification gap. Do not
 claim it passed and do not add a script unless the selected plan task includes
@@ -139,6 +147,7 @@ that work.
 Return a concise implementation report containing:
 
 - Jira issue and `TASK-*` identifier.
+- Source branch confirmed with the human and the created task branch name.
 - Files created, modified, and intentionally reused.
 - Requirement, acceptance-criteria, and contract coverage.
 - Tests added or updated.

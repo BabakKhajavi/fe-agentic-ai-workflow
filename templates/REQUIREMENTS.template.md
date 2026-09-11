@@ -14,9 +14,9 @@
 
 ## Sources
 
-| Source ID | Page title | URL or page ID | Version | Last updated | Sections used |
-| --- | --- | --- | --- | --- | --- |
-| `SRC-001` | `<title>` | `<reference>` | `<version or unknown>` | `<timestamp or unknown>` | `<sections>` |
+| Source ID | Source type | Title or summary | Reference (URL, page ID, or issue key) | Version | Last updated | Sections or notes used |
+| --- | --- | --- | --- | --- | --- | --- |
+| `SRC-001` | `Confluence`, `Jira`, or `Developer-provided` | `<title>` | `<reference>` | `<version or unknown>` | `<timestamp or unknown>` | `<sections>` |
 
 ## Business objective
 

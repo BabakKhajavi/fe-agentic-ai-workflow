@@ -237,7 +237,9 @@ application-wide convention, update this document after approval.
 
 The proof of concept consists of:
 
-- Confluence as the upstream product-requirement system.
+- Confluence, Jira, or a developer-provided requirement description as the
+  upstream product-requirement source, depending on how the feature was
+  intaken.
 - `ai-workflow/` as the local SDD and agent-orchestration workspace.
 - Jira as the approved-work tracking system.
 - `smooth-web/` (five repositories — see "Module federation structure" above)
@@ -247,7 +249,8 @@ The proof of concept consists of:
 ### High-level flow
 
 ```text
-Confluence product specification
+Product requirement source
+(Confluence, Jira ticket, or developer prompt)
              |
              v
         Intake agent
