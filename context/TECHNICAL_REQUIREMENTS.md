@@ -6,12 +6,52 @@ explicitly approved architectural decision.
 
 ## Platform
 
-- `TECH-001` — The application must be implemented with React and TypeScript.
+- `TECH-001` — The application must be implemented with React and
+  TypeScript, both frozen at the exact version in `TECH-148`.
 - `TECH-002` — The application must use Vite for local development and
   production bundling and must produce a repeatable production build.
 - `TECH-003` — The application must run without browser-delivered secrets.
 - `TECH-004` — Dependencies must be declared and locked by the repository's
   package manager.
+- `TECH-148` — TypeScript, React, `react-dom`, MUI (`@mui/material`,
+  `@mui/icons-material`, `@mui/system`), Redux Toolkit (`@reduxjs/toolkit`,
+  which includes RTK Query), `react-redux`, Formik, and Yup are **frozen**
+  at the following exact versions, decided 2026-09-14. This is a fixed
+  pin, not a "track latest" policy — do not bump any of these to a newer
+  release without an explicit, separately approved decision, even when a
+  newer stable version is published:
+  - React / `react-dom` — `19.3.0`
+  - TypeScript — `7.0.2`
+  - `@reduxjs/toolkit` — `2.12.0`
+  - `react-redux` — `9.3.0`
+  - `@mui/material` / `@mui/icons-material` / `@mui/system` — `9.4.0`
+  - Formik — `2.4.9`
+  - Yup — `1.7.1`
+
+  Every `smooth-web-*` repository must use exactly these versions. MUI "X"
+  products (`@mui/x-data-grid`, `@mui/x-charts`, etc.) are frozen at the
+  version compatible with the pinned `@mui/material` version at the time
+  this list is set, which may not share the same major number as core
+  MUI.
+- `TECH-149` — React, MUI, Redux Toolkit, RTK Query, `react-redux`, and
+  React Router (once adopted) must be declared as shared singletons
+  (`singleton: true` with a pinned `requiredVersion`) in every
+  repository's `webpack.config.js` `ModuleFederationPlugin` `shared`
+  configuration, so exactly one instance of each loads across the host and
+  all remotes.
+- `TECH-150` — React Router `8` must not be adopted until its
+  compatibility with `smooth-web-app`'s current routing and Module
+  Federation configuration is verified and a human confirms the adoption.
+  Until then, the currently installed router version is the baseline. This
+  is a separate decision from `TECH-148`.
+- `TECH-151` — A repository must not install a different version of a
+  singleton-shared or `TECH-148` library than the frozen version used by
+  every other repository. Changing a `TECH-148` version at all is a
+  deliberate exception to the freeze: it requires explicit human approval,
+  a coordinated change across every repository, and verification of
+  breaking changes and toolchain compatibility (lint config, test runner,
+  build config) before it lands — reported in the task's `IMPACT.md` or
+  Developer Report.
 
 ## Routing and code splitting
 
@@ -35,6 +75,27 @@ explicitly approved architectural decision.
 - `TECH-093` — Tailwind, CSS Modules, Sass, styled-components, Emotion used
   directly outside MUI, and additional component libraries must not be added.
 - `TECH-094` — `CssBaseline` must provide the application-wide browser reset.
+
+## Design system
+
+- `TECH-142` — A component that may be reusable across repositories must
+  be created first in `smooth-web-settings-mfe`, classified as an atom,
+  molecule, organism, layout, or template, before it is consumed by any
+  remote or the host shell.
+- `TECH-143` — Every reusable component in `smooth-web-settings-mfe`'s
+  design system must have a Storybook story.
+- `TECH-144` — `smooth-web-settings-mfe` must expose its design-system
+  components through its `webpack.config.js` `ModuleFederationPlugin`
+  `exposes` configuration so the host and other remotes can consume them.
+- `TECH-145` — Before creating a new reusable component, the existing
+  design system must be checked for an equivalent; an existing component
+  must be reused, not duplicated.
+- `TECH-146` — Changing an existing shared component in a way that could
+  affect its current consumers requires explicit human approval before the
+  change is made.
+- `TECH-147` — Design-system components must be implemented using the
+  shared, global MUI theme rather than component-local hardcoded style
+  values.
 
 ## Forms and validation
 
@@ -69,6 +130,41 @@ explicitly approved architectural decision.
 - `TECH-119` — Authentication tokens, when required, must be attached through a
   centralized RTK Query base-query configuration and must not be persisted in an
   unsafe browser location.
+- `TECH-130` — All RTK Query API endpoint slices must be defined in
+  `smooth-web-data-mfe`, organized by feature under `apis/<feature-name>/`,
+  and named `<feature-name>-api-slice`.
+- `TECH-131` — All global (non-server) client state must be defined as
+  Redux Toolkit slices in `smooth-web-data-mfe` and registered in the
+  shared Redux store. It must not be implemented as an RxJS
+  `Subject`/`BehaviorSubject` stream (the legacy pattern, e.g.
+  `auth-stream.ts`); an existing stream must be migrated to a Redux Toolkit
+  slice when an approved task touches it.
+- `TECH-132` — Every API slice and global-state slice defined in
+  `smooth-web-data-mfe` must be exposed through its `webpack.config.js`
+  `ModuleFederationPlugin` `exposes` configuration so other `smooth-web-*`
+  repositories can consume it.
+- `TECH-133` — A consuming repository must not define its own duplicate API
+  slice or duplicate global-state slice for data owned by
+  `smooth-web-data-mfe`; it must consume the slice exposed by
+  `smooth-web-data-mfe` instead.
+- `TECH-134` — A consuming repository must access `smooth-web-data-mfe`
+  state and API slices only through its own feature-specific custom
+  hook(s); components must not import an exposed slice, its selectors, or
+  its endpoint hooks directly.
+- `TECH-135` — The feature name used under
+  `smooth-web-data-mfe/apis/<feature-name>/` (and its global-state slice)
+  must match the feature name used in the consuming repository's
+  `src/features/<feature-name>/` so ownership stays traceable across
+  repositories.
+- `TECH-136` — An endpoint must use `transformResponse` (or
+  `transformErrorResponse`) whenever the raw API response needs
+  normalization, reshaping, or trimming before it is cached, instead of
+  repeating that transformation in a consuming hook or component. The
+  transformed shape must be documented in `CONTRACTS.md`.
+- `TECH-137` — Redux Toolkit slices (owned by `smooth-web-data-mfe`) must be
+  used only for state that is genuinely cross-module or cross-app.
+  Feature-internal state must not be added to the Redux store; use the
+  feature's own Context provider instead (see `TECH-140`).
 
 ## Logic and hooks
 
@@ -81,6 +177,30 @@ explicitly approved architectural decision.
   their consumers and must not hide unexpected side effects.
 - `TECH-123` — Pure calculations and domain rules that do not require React must
   remain pure functions rather than being placed in hooks.
+- `TECH-124` — A utility function must not be defined inside a component
+  file. It must live in a `utils/` folder: under the owning feature
+  (`src/features/<feature-name>/utils/`) when it is only useful to that
+  feature, or under the repository's shared `src/utils/` when it is
+  reusable across features in that repository.
+
+## Component structure
+
+- `TECH-138` — Each feature must separate container components
+  (`containers/` — own data-fetching, hook orchestration, and derived
+  state, with no independent markup) from presentational components
+  (`components/` — typed props in, JSX out, no data-fetching or store/
+  Context access of their own).
+- `TECH-139` — No component file, container or presentational, may exceed
+  300 lines. Split it into smaller components or extract logic into a hook
+  or pure function before it does.
+- `TECH-140` — When state must reach deeply nested descendants within one
+  feature, use that feature's own Context provider (`context/`) instead of
+  passing the value as a prop through intermediate components that do not
+  use it themselves.
+- `TECH-141` — A feature's Context provider must hold only that feature's
+  internal state. State needed by another feature or repository must be
+  owned by `smooth-web-data-mfe` instead (see `TECH-130` through
+  `TECH-135`), not shared through a feature's Context provider.
 
 ## Type safety and quality
 
@@ -90,6 +210,13 @@ explicitly approved architectural decision.
   before a feature is presented as done.
 - `TECH-013` — Suppressed type or lint errors must include a specific,
   reviewable justification.
+- `TECH-014` — A string or numeric literal that is reused, user-facing, or
+  carries domain meaning (UI copy, error/status messages, storage or cache
+  keys, RTK Query tag names, route paths, event or channel names, HTTP
+  headers, etc.) must be declared as a named constant and imported wherever
+  it is used, not repeated as an inline literal. A literal that is
+  genuinely unique to one call site and carries no reusable meaning is not
+  required to be extracted.
 
 ## Accessibility
 
@@ -142,6 +269,17 @@ explicitly approved architectural decision.
 - `TECH-071` — Tests must focus on user-visible behavior and business rules.
 - `TECH-072` — Defect fixes must include a regression test when reasonably
   possible.
+- `TECH-073` — Every component must have Jest + React Testing Library test
+  scenarios created in the same change that creates the component. A
+  component must not be presented as done without them.
+- `TECH-074` — Test scenarios must be updated in the same change that
+  changes the behavior they cover. A test left asserting removed or
+  changed behavior is a defect in that change, not a pre-existing
+  condition to fix later.
+- `TECH-075` — Component and hook tests must use Jest and React Testing
+  Library. Critical multi-page or cross-MFE flows must use Playwright.
+- `TECH-076` — Tests must mock API calls with MSW handlers rather than
+  mocking `fetch`, RTK Query internals, or a custom API client directly.
 
 ## Traceability
 

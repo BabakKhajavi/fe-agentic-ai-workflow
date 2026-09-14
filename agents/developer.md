@@ -60,7 +60,15 @@ The Developer Agent may:
   files.
 - Modify files under the relevant `../../smooth-web/smooth-web-*/` repository
   required by the selected task.
+- Create a new reusable component, or reuse an existing one, in
+  `smooth-web-settings-mfe`'s design system when the selected task needs a
+  component that may be reusable beyond its own feature — even when
+  `smooth-web-settings-mfe` is not the task's primary repository. See
+  "Components" below for the required procedure.
 - Add or update dependencies explicitly approved by `IMPACT.md` and `PLAN.md`.
+  Never install a different major/minor version of a shared singleton
+  (React, MUI, Redux Toolkit, RTK Query, `react-redux`, React Router) than
+  the version declared in the host's `webpack.config.js` `shared` config.
 - Add tests, mocks, fixtures, and configuration required by the selected task.
 - Make a small necessary adjacent change when it is unavoidable, clearly report
   it, and show why it remains within approved scope.
@@ -83,6 +91,52 @@ The Developer Agent must not:
 - Keep route modules lazy-loaded and preserve route-level code splitting.
 - Provide accessible loading and recoverable error states for affected routes.
 
+### Components
+
+- Split each feature into container components (`containers/` — data
+  fetching, hook orchestration, derived state, minimal markup of their own)
+  and presentational components (`components/` — typed props in, JSX out,
+  no data-fetching or store/Context access of their own).
+- Keep every component file at or under 300 lines; split it or extract
+  logic into a hook or pure function before it grows past that.
+- Avoid prop drilling: prefer composition first. If a value must reach a
+  deeply nested descendant within one feature, use that feature's own
+  `context/` provider and matching hook instead of passing it through
+  layers that do not use it.
+- A feature's `context/` provider holds only that feature's own internal
+  state (e.g. modal open/closed). Do not use it to share state with
+  another feature or repository, and do not put it in the Redux store —
+  cross-module state is owned by `smooth-web-data-mfe`. Only add a
+  `context/` provider when the feature actually needs one.
+
+### Reusable components (design system)
+
+Before writing a new component, decide whether it may be reusable beyond
+the feature that needs it right now (a generic button, field, card, modal,
+page layout, etc., as opposed to something with feature-specific business
+logic).
+
+1. If it may be reusable, first check `smooth-web-settings-mfe`'s existing
+   design system (atoms, molecules, organisms, layouts, templates) for an
+   equivalent component.
+2. If a suitable component already exists, consume it as exposed by
+   `smooth-web-settings-mfe`'s `webpack.config.js` — do not recreate it in
+   the task's repository.
+3. If no suitable component exists, create it in `smooth-web-settings-mfe`
+   first, in the correct atomic-design category, built from the shared MUI
+   theme, with a Storybook story, and expose it through that repository's
+   `webpack.config.js`. Only then consume it from the task's actual
+   repository.
+4. If an existing shared component needs to change and the change could
+   affect its current consumers (changed prop type, removed prop, or
+   changed default visual behavior), stop and ask the human developer for
+   explicit approval before making the change — do not silently modify
+   shared component behavior other repositories depend on. A purely
+   additive, backward-compatible change does not require asking.
+5. If a component is feature-specific business logic wearing a generic
+   shape, keep it in the feature's own `components/`; do not move it to
+   `smooth-web-settings-mfe` just because it looks reusable.
+
 ### MUI
 
 - Use MUI as the only component and styling system.
@@ -103,8 +157,39 @@ The Developer Agent must not:
 - Use RTK Query for application API access and server state.
 - Match typed requests and responses to `CONTRACTS.md`.
 - Implement the approved `providesTags`, `invalidatesTags`, cache lifetime,
-  refetching, and mock/live behavior.
+  refetching, and mock/live behavior. Every query whose data a mutation can
+  affect must provide tags, and that mutation must invalidate them.
+- Add `transformResponse` (or `transformErrorResponse`) on an endpoint when
+  the raw response needs normalization, reshaping, or trimming before
+  caching, rather than reshaping it again in a hook or component. Document
+  the transformed shape in `CONTRACTS.md`.
 - Do not copy RTK Query results into component state or ordinary Redux slices.
+- `smooth-web-data-mfe` owns every API slice (`apis/<feature-name>/`,
+  named `<feature-name>-api-slice`) and every global-state slice, exposed
+  through its `webpack.config.js`. If the task is in a different repository
+  and needs new or changed shared state or API access, implement it in
+  `smooth-web-data-mfe` and expose it there — do not add a duplicate slice
+  in the consuming repository. If that is out of scope for the selected
+  task, stop with `PLAN_MISMATCH` and report it rather than routing around
+  the boundary.
+- In the consuming repository, access `smooth-web-data-mfe` state or API
+  slices only through a feature-specific custom hook whose feature name
+  matches the one used in `smooth-web-data-mfe`. Components must not import
+  the exposed slice directly.
+
+### Constants
+
+- Do not write a reused, user-facing, or domain-meaningful string or number
+  as an inline literal. Declare it as a named constant and import it
+  wherever it is used.
+- Feature-specific constants go in `src/features/<feature-name>/constants.ts`;
+  constants shared across features or exposed across repositories go in
+  `src/constants/`.
+- This applies to cache tag names, RTK Query keys, storage keys, and route
+  paths as much as to UI copy and error messages.
+- Do not define a utility function inside a component file. Put a
+  feature-only utility in `src/features/<feature-name>/utils/`; put one
+  reused across features in that repository's shared `src/utils/`.
 
 ### Logic placement
 
@@ -119,6 +204,14 @@ The Developer Agent must not:
 - Prefer behavior-based tests using accessible queries.
 - Handle applicable loading, empty, success, validation, and error states.
 - Do not conceal failures or weaken configured checks to make them pass.
+- Create Jest + React Testing Library test scenarios for every component
+  created in this task, in the same change — never as a follow-up task.
+- Update the test scenarios for every component this task modifies, in the
+  same change, so no test is left asserting removed or changed behavior.
+- Add Playwright coverage only for the task's critical multi-page or
+  cross-MFE flow, when the plan calls for it.
+- Mock API calls with MSW handlers instead of mocking `fetch`, RTK Query
+  internals, or a custom API client directly.
 
 ## Work sequence
 
@@ -149,6 +242,8 @@ Return a concise implementation report containing:
 - Jira issue and `TASK-*` identifier.
 - Source branch confirmed with the human and the created task branch name.
 - Files created, modified, and intentionally reused.
+- Any `smooth-web-settings-mfe` design-system component created or reused,
+  and any shared-component change a human approved mid-task.
 - Requirement, acceptance-criteria, and contract coverage.
 - Tests added or updated.
 - Exact verification commands and their results.

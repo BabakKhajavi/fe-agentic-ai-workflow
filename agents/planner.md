@@ -58,6 +58,19 @@ Do not modify React code, dependencies, SDD inputs, Jira, or Git history.
 - Distinguish existing files from proposed files.
 - If the repository conflicts with mandatory `TECH-*` requirements, document the
   gap and remediation rather than hiding it.
+- Confirm the installed versions of TypeScript, React, MUI, Redux Toolkit,
+  RTK Query, `react-redux`, Formik, and Yup match the exact frozen
+  versions in `TECH-148`. A repository on a different version is a gap to
+  document, not something to silently bump to the newer available release
+  — an upgrade requires the explicit human approval `TECH-151` describes.
+  Confirm React, MUI, Redux Toolkit, RTK Query, and `react-redux` are each
+  declared as a shared singleton in the relevant `webpack.config.js` per
+  `TECH-149`. Document any gap rather than assuming compliance.
+- If the feature would benefit from React Router `8`, verify its
+  compatibility with the current router and Module Federation setup before
+  proposing it in `PLAN.md` (`TECH-150`). If compatibility is not
+  confirmed, plan against the currently installed router version instead
+  and note the open question.
 
 ### 2. Produce `IMPACT.md`
 

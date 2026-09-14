@@ -32,20 +32,39 @@ are defined in `ENGINEERING_STANDARDS.md`.
 
 The proof-of-concept application will use:
 
-- React with TypeScript.
+- React (with TypeScript), MUI, Redux Toolkit, `react-redux`, Formik, and
+  Yup are **frozen at fixed, exact versions** as a deliberate company
+  policy — see `TECHNICAL_REQUIREMENTS.md` `TECH-148` for the exact
+  versions. This is a hard pin, not a "track latest" policy; changing one
+  requires an explicit, separately approved decision.
 - Vite for local development and production builds.
-- React Router with lazy-loaded route modules for client-side navigation.
-- Material UI (MUI) as the only component and styling system.
-- Formik 2 with Yup for forms and validation.
+- React Router `8` with lazy-loaded route modules for client-side
+  navigation, **if confirmed compatible** with `smooth-web-app`'s current
+  routing and Module Federation setup (see the open question below);
+  otherwise the currently installed router version remains the baseline.
+  Unlike the libraries above, React Router is not part of the `TECH-148`
+  freeze — its version is a separate, explicit decision.
 - Redux Toolkit for global client state.
 - RTK Query for API access, server-state caching, and cache invalidation.
-- Vitest and React Testing Library for automated component and behavior tests.
+- Jest and React Testing Library for automated component and behavior
+  tests (confirmed 2026-09-11 for `smooth-web`; this was previously
+  written as Vitest, which assumes the Vite build tool — see the
+  unresolved Vite-vs-Webpack conflict noted above).
+- MSW (Mock Service Worker) for mocking API responses in tests instead of
+  mocking `fetch` or RTK Query internals directly.
 - ESLint and TypeScript checking as required quality gates.
-- Playwright only when an end-to-end browser flow is required by a feature.
+- Playwright for critical multi-page or cross-MFE end-to-end flows.
 
 Exact dependency versions are recorded in each `smooth-web-*/package.json`.
 Agents must follow the installed versions instead of assuming APIs from
 another version.
+
+**Open question, not yet confirmed:** React Router `8` compatibility with
+`smooth-web-app`'s current routing and Module Federation configuration has
+not been verified against the actual repository. A Planner/Architect Agent
+must check the installed router version and confirm `8` is compatible (or
+report that it is not) before `IMPACT.md`/`PLAN.md` proposes adopting it —
+see `TECH-150`.
 
 ### Module federation structure
 
@@ -67,9 +86,88 @@ their status with the user rather than assuming they don't exist or building
 against them.
 
 Each repo is independently versioned and independently deployed behind
-`getMfeBaseUrl(...)`. Shared singletons (React, etc.) are declared in the
-host's `shared` config — check it before assuming a dependency can float
-independently in a remote.
+`getMfeBaseUrl(...)`. Shared singletons are declared in the host's `shared`
+config — check it before assuming a dependency can float independently in
+a remote.
+
+React, MUI, Redux Toolkit, RTK Query, `react-redux`, and React Router
+(once/if adopted) must all be declared as shared singletons
+(`singleton: true` with a pinned `requiredVersion`) in every repository's
+`webpack.config.js` `ModuleFederationPlugin` `shared` configuration, at the
+versions in "Technology baseline" above, so exactly one instance of each
+loads across the host and every remote. See `TECH-148` through `TECH-151`.
+
+### Data and global state ownership (`smooth-web-data-mfe`)
+
+`smooth-web-data-mfe` is the single owner of server-data access and global
+client state for the whole federated application:
+
+- RTK Query API endpoint slices live under
+  `smooth-web-data-mfe/src/apis/<feature-name>/<feature-name>-api-slice.ts`
+  (or equivalent), one feature folder per business capability.
+- Global client state — previously implemented as RxJS `Subject`/
+  `BehaviorSubject` streams such as `auth-stream.ts` — must be implemented as
+  Redux Toolkit slices instead, registered in the shared Redux store
+  alongside the RTK Query API slices.
+- Both kinds of slices are exposed from `smooth-web-data-mfe`'s
+  `webpack.config.js` `ModuleFederationPlugin` `exposes` entry so the host
+  and other remotes can consume them.
+- A consuming repository (`smooth-web-app`, `smooth-web-menu-mfe`,
+  `smooth-web-design-mfe`, `smooth-web-settings-mfe`) must not define its
+  own copy of state or API access already owned by `smooth-web-data-mfe`. It
+  wraps the imported slice in its own feature-specific custom hook, and
+  components consume only that hook — never the imported slice directly.
+  This keeps a single source of truth for each piece of shared state.
+- The feature name must match between `smooth-web-data-mfe` and the
+  consuming repository (for example, `apis/orders` in `smooth-web-data-mfe`
+  paired with `src/features/orders/` in the consumer) so a reviewer can
+  trace ownership across repositories.
+
+See `TECHNICAL_REQUIREMENTS.md` `TECH-130` through `TECH-135` for the
+enforceable rules and `ENGINEERING_STANDARDS.md` for naming conventions.
+
+**Open question, not yet confirmed:** where the single shared Redux store
+itself is instantiated (in the host `smooth-web-app`, or in
+`smooth-web-data-mfe` and exposed to the host) has not been stated. Module
+Federation requires state libraries like `redux`/`react-redux` to be shared
+singletons; confirm the store's instantiation point and its `shared` config
+entry with a human before a Planner/Architect Agent relies on it.
+
+### Design system ownership (`smooth-web-settings-mfe`)
+
+`smooth-web-settings-mfe` is the single owner of the shared, reusable
+component library for the whole federated application, built with atomic
+design:
+
+- Every component that may be reusable beyond the feature that first needs
+  it must be created in `smooth-web-settings-mfe`, classified as an atom,
+  molecule, organism, layout, or template, before it is consumed anywhere
+  else.
+- Every component in this design system has a Storybook (`storybook.js`)
+  story.
+- These components are exposed from `smooth-web-settings-mfe`'s
+  `webpack.config.js` `ModuleFederationPlugin` `exposes` entry so the host
+  shell and every remote can consume them.
+- Before creating a new reusable component, check the existing design
+  system for an equivalent. Reuse it rather than creating a duplicate.
+- If an existing shared component needs to change and that change could
+  affect its current consumers, stop and get explicit human approval
+  before changing it. Do not silently modify shared component behavior
+  that other repositories already depend on.
+- The whole design system is built from the shared, global MUI theme
+  (colors, typography, spacing, shape, breakpoints, component defaults) —
+  a design-system component must not hardcode style values the theme
+  already defines.
+
+This is a separate ownership boundary from `smooth-web-data-mfe` (data/
+state, above): `smooth-web-settings-mfe` owns shared **presentation**
+(components), `smooth-web-data-mfe` owns shared **data and state**. A
+consuming repository composes the two through its own feature-specific
+hooks and containers.
+
+See `TECHNICAL_REQUIREMENTS.md` `TECH-142` through `TECH-147` for the
+enforceable rules and `ENGINEERING_STANDARDS.md` for folder and naming
+conventions.
 
 ### Source organization
 
@@ -83,6 +181,7 @@ sample-react-app/src/
 ├── services/         # Shared external-system and HTTP infrastructure
 ├── hooks/            # Shared React hooks
 ├── types/            # Shared TypeScript types
+├── constants/        # Shared, application-wide named constants
 ├── utils/            # Pure shared utilities
 ├── styles/           # Global styles, tokens, and themes
 ├── test/             # Shared test setup and helpers
@@ -99,10 +198,14 @@ may contain:
 
 ```text
 <feature-name>/
-├── components/
+├── containers/       # Container components: own data/behavior, no markup of their own
+├── components/       # Presentational components: typed props in, JSX out
+├── context/          # Optional — feature-internal state only, never cross-module state
 ├── hooks/
 ├── services/
+├── utils/
 ├── types.ts
+├── constants.ts
 ├── index.ts
 └── __tests__/
 ```
@@ -116,11 +219,28 @@ usage must go through the feature's intentional public exports.
 
 ### Component model
 
-- Components should have one clear responsibility.
-- Pages and feature containers coordinate data and user flows.
-- Presentation components receive typed props and avoid hidden external state.
-- Reusable components belong in `src/components/`; feature-specific components
-  stay with their feature.
+Each feature follows the container/representational pattern:
+
+- A **container** component (`containers/`) owns data-fetching, hook
+  orchestration, and derived state, and passes typed props down. It renders
+  little or no markup of its own.
+- A **presentational** component (`components/`) receives typed props,
+  renders JSX, and avoids hidden external state, direct data-fetching, or
+  Redux/Context access of its own.
+- No component file, container or presentational, may exceed 300 lines.
+  Split it into smaller components or extract logic into a hook or pure
+  function before it does.
+- Prefer composition (children, render props, slots) over passing the same
+  prop through several intermediate components. When state must reach
+  deeply nested descendants within one feature, use that feature's own
+  `context/` provider instead of drilling props through layers that don't
+  use the value themselves.
+- A component reused only within one repository's own features belongs in
+  that repository's `src/components/`; feature-specific components stay
+  with their feature. A component that may be reusable across
+  repositories belongs in the shared atomic design system owned by
+  `smooth-web-settings-mfe` instead (see "Design system ownership"
+  below) — create it there first, then consume it via Module Federation.
 - Business rules should be extracted into testable hooks or pure functions when
   embedding them in JSX would obscure behavior.
 
@@ -142,10 +262,23 @@ Use the narrowest state mechanism that satisfies the requirement:
 2. Formik 2 state for form values, touched state, errors, and submission state.
 3. URL state for navigation, filtering, and shareable views.
 4. RTK Query cache for remote server state.
-5. Redux Toolkit slices for genuinely global client state.
-6. Context only for stable framework concerns that are not application state.
+5. A feature's own `context/` provider for internal state shared across that
+   feature's containers and components (for example, a modal's open/closed
+   state) — never for state another feature or module needs.
+6. Redux Toolkit slices, owned by `smooth-web-data-mfe`, for genuinely
+   cross-module or cross-app global client state.
+7. Context otherwise only for stable framework concerns that are not
+   application state.
 
-Do not duplicate RTK Query server data in Redux slices or component state.
+A feature may pair its `context/` provider with its own custom hook (for
+example `useOrdersContext`) so consumers read and update that state without
+calling `useContext` directly. Do not put feature-internal state in the
+Redux store, and do not reach for a feature's `context/` provider to share
+state that a different feature or repository also needs — that belongs in
+`smooth-web-data-mfe` (see "Data and global state ownership" above).
+
+Do not duplicate RTK Query server data in Redux slices, Context, or
+component state.
 
 ### Data and integrations
 
@@ -203,9 +336,14 @@ Do not duplicate RTK Query server data in Redux slices or component state.
 
 ### Testing architecture
 
-- Pure business logic receives unit tests.
-- User-visible component behavior receives React Testing Library tests.
-- Critical multi-page or integration flows may receive Playwright tests.
+- Pure business logic receives Jest unit tests.
+- Every component receives Jest + React Testing Library test scenarios,
+  created in the same change that creates the component and updated in the
+  same change that changes its behavior — not deferred to a later task.
+- Critical multi-page or cross-MFE integration flows receive Playwright
+  tests.
+- API calls are mocked with MSW handlers in tests, not by mocking `fetch`
+  or RTK Query internals directly.
 - Tests should verify observable behavior instead of component internals.
 - Each feature plan must map acceptance criteria to verification evidence.
 

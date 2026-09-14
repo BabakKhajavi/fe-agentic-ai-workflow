@@ -18,16 +18,24 @@ and the unresolved Vite-vs-MFE baseline conflict):
 - `smooth-web-app` — host shell that composes the client experience.
 - `smooth-web-menu-mfe` — menu browsing and ordering.
 - `smooth-web-design-mfe` — per-client storefront branding/presentation.
-- `smooth-web-data-mfe` — data/reporting surfaces.
-- `smooth-web-settings-mfe` — client/storefront configuration.
+- `smooth-web-data-mfe` — server-data access and global client state, owned
+  and exposed for every repository to consume (confirmed; see
+  `ARCHITECTURE.md` "Data and global state ownership").
+- `smooth-web-settings-mfe` — confirmed by the user (2026-09-11) to host
+  the shared, cross-repository atomic-design component library (atoms,
+  molecules, organisms, layouts, templates), exposed for the host and every
+  remote to consume — despite the repo name, this is not primarily a
+  "settings" feature. See `ARCHITECTURE.md` "Design system ownership."
 - `smooth-web-auth-mfe`, `smooth-web-dashboard-mfe` — declared as remotes by
   the host but not present locally as of 2026-09-02; do not assume their
   scope without confirmation.
 
-**Assumption, not yet confirmed:** the mapping above from repo name to
-product capability is inferred from repository names and directory
-structure only. It has not been confirmed against a product owner or
-Confluence source and must be treated as a labeled assumption until
+**Assumption, not yet confirmed:** the mapping above for `smooth-web-app`,
+`smooth-web-menu-mfe`, and `smooth-web-design-mfe` is inferred from
+repository names and directory structure only (`smooth-web-data-mfe` and
+`smooth-web-settings-mfe` have since been confirmed directly, above). The
+remaining inferred entries have not been confirmed against a product owner
+or Confluence source and must be treated as a labeled assumption until
 verified.
 
 Publicly, Smooth Commerce (smooth.tech) describes itself as an all-in-one
