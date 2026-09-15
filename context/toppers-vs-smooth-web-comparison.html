@@ -1,0 +1,485 @@
+<title>Toppers to Smooth-Web</title>
+<style>
+  :root {
+    --bg: #f4f6f7;
+    --surface: #ffffff;
+    --surface-alt: #eceff1;
+    --text: #1b222b;
+    --text-muted: #55606b;
+    --border: #d8dee3;
+    --border-strong: #c2cad0;
+    --accent-new: #0f6b74;
+    --accent-new-soft: #e3f1f1;
+    --accent-old: #a6572f;
+    --accent-old-soft: #f7ebe1;
+    --flag: #6e5379;
+    --flag-soft: #efe8f1;
+    --font-body: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151a;
+      --surface: #161c22;
+      --surface-alt: #1c232a;
+      --text: #e7ecef;
+      --text-muted: #9aa7b1;
+      --border: #2a333b;
+      --border-strong: #3a444d;
+      --accent-new: #56c3ca;
+      --accent-new-soft: rgba(86, 195, 202, 0.12);
+      --accent-old: #e08a55;
+      --accent-old-soft: rgba(224, 138, 85, 0.12);
+      --flag: #b79bc2;
+      --flag-soft: rgba(183, 155, 194, 0.14);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #10151a;
+    --surface: #161c22;
+    --surface-alt: #1c232a;
+    --text: #e7ecef;
+    --text-muted: #9aa7b1;
+    --border: #2a333b;
+    --border-strong: #3a444d;
+    --accent-new: #56c3ca;
+    --accent-new-soft: rgba(86, 195, 202, 0.12);
+    --accent-old: #e08a55;
+    --accent-old-soft: rgba(224, 138, 85, 0.12);
+    --flag: #b79bc2;
+    --flag-soft: rgba(183, 155, 194, 0.14);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15.5px;
+    line-height: 1.6;
+    padding: 0 20px;
+  }
+
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding-block: 48px 64px;
+  }
+
+  code, .mono {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  header.intro {
+    margin-bottom: 36px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-new);
+    font-weight: 500;
+    margin: 0 0 14px;
+  }
+
+  h1 {
+    font-size: clamp(28px, 4vw, 38px);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 0 0 14px;
+    color: var(--text);
+  }
+
+  .dek {
+    max-width: 62ch;
+    color: var(--text-muted);
+    font-size: 16px;
+    margin: 0 0 22px;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .meta-pill {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 5px 12px;
+    white-space: nowrap;
+  }
+
+  .legend {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+    font-size: 13.5px;
+    color: var(--text-muted);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex: none;
+  }
+
+  .swatch.old { background: var(--accent-old); }
+  .swatch.new { background: var(--accent-new); }
+  .swatch.flag { background: var(--flag); }
+
+  .table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 880px;
+  }
+
+  caption {
+    caption-side: top;
+    text-align: left;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-alt);
+    text-align: left;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border-strong);
+    z-index: 1;
+  }
+
+  thead th.col-old { color: var(--accent-old); }
+  thead th.col-new { color: var(--accent-new); }
+
+  tbody tr.group-row th {
+    text-align: left;
+    background: var(--surface-alt);
+    color: var(--text);
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-top: 1px solid var(--border-strong);
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr.data-row td {
+    padding: 14px 18px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  tbody tr.data-row:last-child td {
+    border-bottom: none;
+  }
+
+  td.area {
+    font-weight: 600;
+    width: 15%;
+    min-width: 150px;
+  }
+
+  td.old {
+    border-left: 3px solid var(--accent-old);
+    background: color-mix(in srgb, var(--accent-old-soft) 55%, transparent);
+    width: 34%;
+  }
+
+  td.new {
+    border-left: 3px solid var(--accent-new);
+    background: color-mix(in srgb, var(--accent-new-soft) 55%, transparent);
+    width: 34%;
+  }
+
+  td.ref {
+    width: 17%;
+    color: var(--text-muted);
+    font-size: 12.5px;
+  }
+
+  td.ref code {
+    display: block;
+    line-height: 1.7;
+  }
+
+  sup.note {
+    font-family: var(--font-mono);
+    color: var(--flag);
+    font-weight: 600;
+    margin-left: 3px;
+  }
+
+  .notes {
+    margin-top: 26px;
+    padding: 18px 20px;
+    background: var(--flag-soft);
+    border: 1px solid var(--flag);
+    border-radius: 10px;
+  }
+
+  .notes h2 {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--flag);
+    margin: 0 0 10px;
+    font-weight: 600;
+  }
+
+  .notes ol {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--text);
+    font-size: 13.5px;
+  }
+
+  .notes li { margin-bottom: 6px; }
+  .notes li:last-child { margin-bottom: 0; }
+  .notes li::marker {
+    font-family: var(--font-mono);
+    color: var(--flag);
+  }
+
+  footer.source-note {
+    margin-top: 30px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 640px) {
+    .page { padding-block: 32px 44px; }
+    body { font-size: 15px; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="intro">
+    <p class="eyebrow">Architecture comparison</p>
+    <h1>Toppers-web-ordering &rarr; smooth-web</h1>
+    <p class="dek">
+      Every row on the legacy side is verified directly against the
+      <code>toppers-web-ordering</code> repository. Every row on the target side is
+      a rule already written into the <code>smooth-ai-web-workflow</code> docs —
+      a documented target for the rebuild, not yet a built and verified app.
+    </p>
+    <div class="meta-row">
+      <span class="meta-pill">legacy verified 2026-09-15</span>
+      <span class="meta-pill">target = smooth-web rules, in progress</span>
+      <span class="meta-pill">16 dimensions</span>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span class="legend-item"><span class="swatch old"></span> toppers-web-ordering (shipped, legacy)</span>
+    <span class="legend-item"><span class="swatch new"></span> smooth-web (documented target)</span>
+    <span class="legend-item"><span class="swatch flag"></span> flagged in notes below</span>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <caption>Full comparison, grouped by concern, with the rule ID or doc section backing each target-side claim.</caption>
+      <thead>
+        <tr>
+          <th class="col-area">Area</th>
+          <th class="col-old">Old — toppers-web-ordering</th>
+          <th class="col-new">New — smooth-web rules</th>
+          <th class="col-ref">Where documented</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr class="group-row"><th colspan="4">Code quality &amp; safety net</th></tr>
+
+        <tr class="data-row">
+          <td class="area">Type safety</td>
+          <td class="old">Zero TypeScript &mdash; 0 <code>.ts</code>/<code>.tsx</code> files, no <code>tsconfig.json</code>, plain JS throughout.</td>
+          <td class="new">TypeScript mandatory; must pass typecheck before a feature is presented as done.</td>
+          <td class="ref"><code>TECH-001</code><code>TECH-010</code></td>
+        </tr>
+
+        <tr class="data-row">
+          <td class="area">Linting</td>
+          <td class="old">No ESLint config at all &mdash; only Prettier for formatting.</td>
+          <td class="new">Configured lint rules are a mandatory gate; suppressions need a specific, reviewable justification.</td>
+          <td class="ref"><code>TECH-011</code><code>TECH-013</code></td>
+        </tr>
+
+        <tr class="data-row">
+          <td class="area">Testing</td>
+          <td class="old"><code>"test": "echo \"Error: no test specified\" &amp;&amp; exit 1"</code> &mdash; literally zero tests, no framework installed.</td>
+          <td class="new">Every component gets Jest + RTL tests created with the component and updated with behavior changes. Playwright for critical flows, MSW for API mocking.</td>
+          <td class="ref"><code>TECH-073</code>&ndash;<code>076</code></td>
+        </tr>
+      </tbody>
+
+      <tbody>
+        <tr class="group-row"><th colspan="4">Dependency governance</th></tr>
+
+        <tr class="data-row">
+          <td class="area">Dependency currency</td>
+          <td class="old">React <code>16.13</code>, MUI <code>v4</code> (deprecated), Formik <code>1.5.8</code>, Yup <code>0.27</code>, axios <code>0.18</code> &mdash; years stale, no governance to stop drift.</td>
+          <td class="new">React <code>19.3.0</code>, MUI <code>9.4.0</code>, Formik <code>2.4.9</code>, Yup <code>1.7.1</code> &mdash; frozen, with a written approval process before any of them move again.</td>
+          <td class="ref"><code>TECH-148</code><code>TECH-149</code><code>TECH-151</code></td>
+        </tr>
+      </tbody>
+
+      <tbody>
+        <tr class="group-row"><th colspan="4">State &amp; data ownership</th></tr>
+
+        <tr class="data-row">
+          <td class="area">State management</td>
+          <td class="old">Classic Redux + <code>redux-thunk</code>, hand-written action types/creators/reducers scattered per module.</td>
+          <td class="new">Redux Toolkit + RTK Query, typed cache-tag invalidation, <code>transformResponse</code> &mdash; single ownership point instead of ad hoc per-module reducers.<sup class="note">&sect;</sup></td>
+          <td class="ref"><code>TECH-110</code>&ndash;<code>119</code><code>TECH-130</code>&ndash;<code>137</code></td>
+        </tr>
+
+        <tr class="data-row">
+          <td class="area">API access</td>
+          <td class="old">One shared <code>axios</code> client, no visible typed contracts, no caching/invalidation strategy.</td>
+          <td class="new">Typed RTK Query endpoints matched to <code>CONTRACTS.md</code>, tag-based cache invalidation, no ad hoc <code>fetch</code> calls allowed.</td>
+          <td class="ref"><code>TECH-113</code>&ndash;<code>118</code></td>
+        </tr>
+
+        <tr class="data-row">
+          <td class="area">Decoupling &mdash; state/API from UI</td>
+          <td class="old">Redux actions/reducers/types live <em>inside</em> each feature module (e.g. <code>Cart/cartActions.js</code>) &mdash; data ownership and UI ownership are the same code, same bundle.</td>
+          <td class="new"><code>smooth-web-data-mfe</code> owns all API/state. Consumers touch it only through a feature-specific hook &mdash; never a raw import of the slice.</td>
+          <td class="ref"><code>TECH-130</code>&ndash;<code>135</code><code>TECH-137</code><code>TECH-140</code>&ndash;<code>141</code></td>
+        </tr>
+      </tbody>
+
+      <tbody>
+        <tr class="group-row"><th colspan="4">UI &amp; components</th></tr>
+
+        <tr class="data-row">
+          <td class="area">Styling</td>
+          <td class="old">Two competing systems at once &mdash; MUI v4 <em>and</em> <code>styled-components</code>.</td>
+          <td class="new">MUI-only, theme-driven (<code>sx</code>/<code>styled</code>/theme overrides), no competing library.</td>
+          <td class="ref"><code>TECH-090</code>&ndash;<code>094</code><code>TECH-147</code></td>
+        </tr>
+
+        <tr class="data-row">
+          <td class="area">Shared component reuse</td>
+          <td class="old">No dedicated component library &mdash; UI scattered inside <code>src/modules/*</code> and <code>src/layout/components/</code>, no atomic categorization, no Storybook.</td>
+          <td class="new">Dedicated atomic-design system (atoms/molecules/organisms/layouts/templates), Storybook per component, reuse-before-duplicate, human approval on breaking changes.<sup class="note">&Dagger;</sup></td>
+          <td class="ref"><code>TECH-142</code>&ndash;<code>147</code></td>
+        </tr>
+
+        <tr class="data-row">
+          <td class="area">Component structure</td>
+          <td class="old">Container/presentational split already present informally (e.g. <code>CartContainer.js</code> + <code>components/</code>) &mdash; no size limit, no rule against prop drilling.</td>
+          <td class="new">Same pattern formalized: 300-line cap per file, feature-scoped <code>context/</code> instead of prop drilling, restricted to feature-internal state only.</td>
+          <td class="ref"><code>TECH-138</code>&ndash;<code>141</code></td>
+        </tr>
+
+        <tr class="data-row">
+          <td class="area">Decoupling &mdash; shared UI from features</td>
+          <td class="old">UI pieces embedded inside each module or the layout folder, no separately versioned package &mdash; nothing forces reuse.</td>
+          <td class="new">Shared design-system component library lives in its own repo, consumed by every repo via Module Federation <code>exposes</code>.</td>
+          <td class="ref"><code>TECH-142</code>&ndash;<code>147</code></td>
+        </tr>
+
+        <tr class="data-row">
+          <td class="area">Magic strings / utils placement</td>
+          <td class="old">No constants discipline visible. <code>utils/</code> folders exist per module (a decent habit) but nothing stops a util or literal living inside a component.</td>
+          <td class="new">Hard rule: no inline utility functions in components, no unnamed reused/domain literals &mdash; both live in a defined <code>utils/</code>/<code>constants.ts</code>.</td>
+          <td class="ref"><code>TECH-014</code><code>TECH-124</code></td>
+        </tr>
+      </tbody>
+
+      <tbody>
+        <tr class="group-row"><th colspan="4">Deployment architecture</th></tr>
+
+        <tr class="data-row">
+          <td class="area">Decoupling &mdash; deployment units</td>
+          <td class="old">Single Gatsby build per brand; any change anywhere requires rebuilding and redeploying that entire brand's site.</td>
+          <td class="new">MFE split (data/design/menu/settings + host) behind Module Federation &mdash; each capability versioned and deployed independently.<sup class="note">&dagger;</sup></td>
+          <td class="ref">Architecture &mdash; Module federation structure<code>TECH-149</code></td>
+        </tr>
+
+        <tr class="data-row">
+          <td class="area">Multi-brand strategy</td>
+          <td class="old">One shared codebase, <strong>4 separate static builds</strong> baked at build time from <code>appConfigs/*.json</code> (toppers, chopped, fresh, teriyaki).</td>
+          <td class="new">Intended as one running multi-tenant platform, each client's storefront composed at runtime rather than rebuilt per brand.<sup class="note">&para;</sup></td>
+          <td class="ref">PRODUCT.md (assumption)</td>
+        </tr>
+      </tbody>
+
+      <tbody>
+        <tr class="group-row"><th colspan="4">Process &amp; governance</th></tr>
+
+        <tr class="data-row">
+          <td class="area">Traceability</td>
+          <td class="old">No visible link from a code change back to a requirement or ticket &mdash; tribal knowledge only.</td>
+          <td class="new">Full chain: Confluence/Jira/developer-prompt &rarr; REQUIREMENTS &rarr; SPEC/CONTRACTS &rarr; IMPACT/PLAN &rarr; Jira &rarr; Developer Report, cross-referenced by ID.</td>
+          <td class="ref">workflows/feature.mdCLAUDE.md</td>
+        </tr>
+
+        <tr class="data-row">
+          <td class="area">Git hygiene</td>
+          <td class="old">Deploy shell scripts imply manual branch/deploy discipline &mdash; nothing enforced.</td>
+          <td class="new">Enforced branch policy: fixed development/staging/production mains, task branches named <code>&lt;jira-key&gt;-&lt;short-title&gt;</code>.</td>
+          <td class="ref">Engineering Standards &mdash; Branching</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="notes">
+    <h2>Notes &mdash; not yet settled, don't read as done</h2>
+    <ol>
+      <li><strong>&dagger;</strong> The Vite-vs-Webpack technology baseline conflict is still open in <code>ARCHITECTURE.md</code>.</li>
+      <li><strong>&Dagger;</strong> Real repo evidence points at <code>smooth-web-design-mfe</code> for the atomic component library; the docs still say <code>smooth-web-settings-mfe</code>, left as-is per explicit instruction.</li>
+      <li><strong>&sect;</strong> Where the shared Redux store itself is instantiated (host vs. data-mfe) is still an open question in <code>ARCHITECTURE.md</code>.</li>
+      <li><strong>&para;</strong> The "one running multi-tenant platform" framing is an inferred assumption, not confirmed against a product owner or Confluence source.</li>
+    </ol>
+  </div>
+
+  <footer class="source-note">
+    Legacy figures verified against <code>toppers-web-ordering/package.json</code> and its source tree.
+    Target figures reflect <code>smooth-ai-web-workflow/context/</code> and <code>agents/</code> as of this conversation.
+  </footer>
+
+</div>

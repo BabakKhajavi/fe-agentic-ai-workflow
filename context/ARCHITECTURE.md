@@ -5,6 +5,12 @@ architecture of the React application. Mandatory technical constraints are
 defined in `TECHNICAL_REQUIREMENTS.md`, while day-to-day development conventions
 are defined in `ENGINEERING_STANDARDS.md`.
 
+For the rationale behind this target architecture — a row-by-row comparison
+of the legacy `toppers-web-ordering` app against the rules in this
+workspace, with the rule ID backing each target-side claim — see
+[`toppers-vs-smooth-web-comparison.html`](toppers-vs-smooth-web-comparison.html).
+Open it directly in a browser; it is not rendered by this Markdown viewer.
+
 ## Architectural principles
 
 - Keep product features independent and easy to locate.
