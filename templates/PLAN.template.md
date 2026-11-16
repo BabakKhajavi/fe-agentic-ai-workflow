@@ -37,7 +37,7 @@ Run the repository's actual scripts for:
 1. Type checking.
 2. Linting.
 3. Automated tests.
-4. Repository's configured production build (Webpack for `smooth-web-*/`).
+4. Repository's configured production build (`rspack build` for `smooth-web-*/`).
 5. POC user-flow demonstration.
 
 Record any manual acceptance criterion and why automation is not appropriate for

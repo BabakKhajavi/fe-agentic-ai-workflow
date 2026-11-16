@@ -143,7 +143,7 @@
   Migrate a legacy stream (e.g. `auth-stream.ts`) to a slice when the task
   you are doing touches it.
 - Expose new or changed slices from `smooth-web-data-mfe`'s
-  `webpack.config.js` `exposes` entry so other repositories can consume
+  `rspack.config.js` `exposes` entry so other repositories can consume
   them.
 - In a consuming repository, wrap each imported slice in a
   feature-specific custom hook and let components use only that hook —
@@ -173,13 +173,29 @@
   consistent.
 - Avoid inline style values when a reusable token or class communicates intent.
 
-### Design system (`smooth-web-settings-mfe`)
+### Design system (`smooth-web-design-mfe`)
 
-- Organize the shared component library by atomic-design category:
-  `smooth-web-settings-mfe/src/design-system/<atoms|molecules|organisms|
-  layouts|templates>/<ComponentName>/`, each folder containing
-  `<ComponentName>.tsx`, `<ComponentName>.stories.tsx`, `index.ts`, and
-  `__tests__/`.
+- Keep `smooth-web-design-mfe` pure: it holds generic, domain-free
+  atomic-design components only (`TECH-152`).
+  - Name components by what they look like or do (`MediaCard`,
+    `ConfirmModal`, `StatBar`), not by business concept (`ProductCard`,
+    `OfferBanner`, `OrderStatusStepper`).
+  - Components take all data through props. They never call APIs, read
+    `smooth-web-data-mfe` state, or contain business rules.
+  - A domain-specific component built from design-system pieces lives in
+    its owning feature repository, under
+    `src/features/<domain>/components/`.
+- Follow the atomic-design structure that already exists in
+  `smooth-web-design-mfe` (confirmed 2026-11-08):
+  - categories at the root of `src/`: `src/<atoms|molecules|organisms|templates>/`;
+  - components grouped in subfolders by kind, for example
+    `src/atoms/buttons/contained-button.tsx` or
+    `src/molecules/carousel/`;
+  - each level exported through its `index.ts`.
+
+  Add new components into the matching existing category and subfolder,
+  in the same style. Do not introduce a parallel `design-system/` tree.
+  The existing structure and components are accepted as they are.
 - Before adding a new component that might be reusable, search the design
   system's existing categories for an equivalent before writing a new one.
 - Write a Storybook story for every design-system component, covering its
@@ -201,18 +217,88 @@
 - Do not add overlapping libraries for the same concern without approval.
 - Commit the dependency lockfile when dependencies change.
 
+### Build tooling (Rspack + Module Federation 2)
+
+Decided 2026-11-11 (`TECH-153`–`TECH-157`).
+
+- **Use Node 22.** Run `nvm use` (`.nvmrc`) before installing or building.
+- **Scripts in every repository:**
+
+  | Script | Command |
+  | --- | --- |
+  | `start` | `rspack serve` |
+  | `build` | `rspack build` |
+  | `typecheck` | `tsc --noEmit` |
+
+  Run `typecheck` and `build` before handing work over for review.
+- **Keep `rspack.config.js` short.** It calls `createSmoothRspackConfig`
+  from `@smooth/web-build-config` and passes only repository-specific
+  values: kind, federation name, port, entry, exposes, remotes, HTML
+  template, and defines. Example:
+
+  ```js
+  import { createSmoothRspackConfig } from '@smooth/web-build-config';
+  export default createSmoothRspackConfig({
+    dirname: import.meta.dirname,
+    kind: 'remote',
+    name: 'smooth_core',
+    port: 9007,
+    exposes: { './CoreApp': './src/routes/CoreRoutes.tsx' },
+    remotes: ['design', 'data'],
+    html: { template: './public/index.html' },
+  });
+  ```
+- **Change shared build behaviour in `smooth-web-build-config`, not in a
+  repository.** This covers loaders, plugins, shared singletons, remote URLs,
+  ports, and runtime plugins. Release a new version of the package and
+  update every repository to it in the same change set.
+- **Add a new remote in two places:**
+  1. register it in the shared config's `REMOTES` (federation name,
+     repository, port, environment base URLs);
+  2. list it in the consumer's `remotes`.
+
+  Never hardcode a remote URL in a repository.
+- **Dev ports are fixed:**
+
+  | Repository | Port |
+  | --- | --- |
+  | app | 9000 |
+  | auth | 9001 |
+  | design | 9002 |
+  | data | 9003 |
+  | payment | 9005 |
+  | core | 9007 |
+- **Name exposes after the app or module**, for example `./CoreApp`,
+  `./PaymentApp`, `./AuthApp`, `./Store`, `./atoms`. Changing or removing an
+  exposes key is a contract change and must be recorded in the feature's
+  `CONTRACTS.md`.
+- **Know the dev-mode limits.** They were found during the 2026-11-12
+  migration.
+  - A remote does not render standalone on its own port. Remotes never
+    bundle React (`import: false`); run them through the host.
+  - Hot updates work inside the host and inside each dev server, but not
+    across federation boundaries.
+  - `typecheck` in a consumer needs `@mf-types/`. Run `npm start` or
+    `npm run build` first; they fetch the remote types.
+  - Keep production-only `optimization` (module concatenation, a single
+    runtime chunk) out of development, or React Refresh falls back to full
+    reloads.
+- **Do not add Babel, Webpack, or webpack-only plugins.** Use Rspack's
+  built-in equivalents (SWC loader, `HtmlRspackPlugin`, built-in CSS).
+
 ### Shared singleton versions
 
 - React, MUI (`@mui/material`, `@mui/icons-material`, `@mui/system`),
   Redux Toolkit, RTK Query, and `react-redux` are pinned, shared-singleton
   dependencies across every `smooth-web-*` repository. Match the version
-  declared in the host's `webpack.config.js` `shared` config and
-  `package.json` — do not install a different version in a remote.
-- Declare each as `singleton: true` with a pinned `requiredVersion` in the
-  repository's own `ModuleFederationPlugin` `shared` configuration.
-- Before adding or bumping one of these libraries, check the host's
-  `shared` config first; a version change must be coordinated across every
-  repository and approved by a human, not made locally in one remote.
+  in `@smooth/web-build-config` `SHARED_SINGLETONS` and the host's
+  `package.json`. Do not install a different version in a remote.
+- Declare a shared singleton only in `SHARED_SINGLETONS`, never in a
+  repository's own `rspack.config.js`.
+- Before adding or bumping one of these libraries, check the shared config
+  first. A version change must be a coordinated release of
+  `@smooth/web-build-config`, adopted by every repository and approved by a
+  human, not a local change in one remote.
 - Do not adopt React Router `8` until compatibility with the current
   routing/Module Federation setup is verified and a human confirms it; use
   the currently installed router version until then.
@@ -236,6 +322,40 @@
   task.
 - Every repository moves to an approved new version together — never one
   remote ahead of the others (`TECH-149`/`TECH-151`).
+
+## Releases and deployment
+
+The full model and the client-onboarding checklist are in
+`DEPLOYMENT.md` (`TECH-158`–`TECH-164`).
+
+- **Don't put client logic or client values in app code or builds.** A new
+  client is a registry entry plus a brand file, never a code change.
+- **Branch flow:** merge to `staging` to reach staging. Cut a version with
+  `prepare-release` (bump, tag, push); the `v*` tag publishes the build to
+  sandbox. Never re-tag or overwrite a version.
+- **Releasing to clients:** use the `smooth-web-release` pipelines from
+  Bitbucket. Start with `DRY_RUN=true`, and with `CLIENT=ring:canary`, before
+  widening to `ring:general` or `all`. Promote to sandbox before production.
+- **Clients:**
+  - add, rename, suspend, or activate them only in
+    `smooth-web-release/clients.json`;
+  - then run `node scripts/sync-pipeline-clients.js`, so the `CLIENT`
+    dropdown matches;
+  - `validate` fails otherwise.
+- **Slugs** are fixed at onboarding: lowercase, digits, and hyphens.
+  Never rename a slug; onboard a new one instead.
+- **Brand files and brand assets:**
+  - brand files follow the `Brand` / `BrandColors` v2 types;
+  - upload brand JSON with `Cache-Control: public, max-age=0,
+    must-revalidate, s-maxage=3600` and invalidate its path;
+  - give brand assets a version in the file name and cache them
+    immutably;
+  - host assets in `brand-assets/clients/<slug>/`, not on third-party hosts.
+- **Pipeline files:** change the package pipelines through the shared
+  template, so all six stay identical. Never hand-edit one repository's
+  pipeline.
+- **Rollback** by running `rollback-*`. Never edit `clients/<slug>/index.html`
+  or `state/` by hand.
 
 ## Comments and documentation
 

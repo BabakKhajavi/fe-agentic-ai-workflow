@@ -8,8 +8,10 @@ explicitly approved architectural decision.
 
 - `TECH-001` — The application must be implemented with React and
   TypeScript, both frozen at the exact version in `TECH-148`.
-- `TECH-002` — The application must use Vite for local development and
-  production bundling and must produce a repeatable production build.
+- `TECH-002` — Every `smooth-web-*` repository must use Rspack 2 for local
+  development and production bundling, and must produce a repeatable
+  production build (decided 2026-11-11; this replaces Vite/Webpack; see
+  `TECH-153`).
 - `TECH-003` — The application must run without browser-delivered secrets.
 - `TECH-004` — Dependencies must be declared and locked by the repository's
   package manager.
@@ -35,10 +37,10 @@ explicitly approved architectural decision.
   MUI.
 - `TECH-149` — React, MUI, Redux Toolkit, RTK Query, `react-redux`, and
   React Router (once adopted) must be declared as shared singletons
-  (`singleton: true` with a pinned `requiredVersion`) in every
-  repository's `webpack.config.js` `ModuleFederationPlugin` `shared`
-  configuration, so exactly one instance of each loads across the host and
-  all remotes.
+  (`singleton: true` with a pinned `requiredVersion`) in the shared
+  Module Federation config (`@smooth/web-build-config`
+  `SHARED_SINGLETONS`) used by every repository, so exactly one instance
+  of each loads across the host and all remotes.
 - `TECH-150` — React Router `8` must not be adopted until its
   compatibility with `smooth-web-app`'s current routing and Module
   Federation configuration is verified and a human confirms the adoption.
@@ -52,6 +54,62 @@ explicitly approved architectural decision.
   breaking changes and toolchain compatibility (lint config, test runner,
   build config) before it lands — reported in the task's `IMPACT.md` or
   Developer Report.
+
+## Build tooling and Module Federation
+
+Decided 2026-11-11. See `specs/active/rspack-mf2-migration/`.
+
+- `TECH-153` — Every repository must build and serve with Rspack 2
+  (`@rspack/core`, `@rspack/cli`, `@rspack/dev-server`). TypeScript and
+  JSX must be compiled with Rspack's built-in SWC loader. Webpack and
+  Babel-based build tooling must not be added back.
+- `TECH-154` — Module Federation must use the `ModuleFederationPlugin` from
+  `@module-federation/enhanced/rspack`, at one exact version shared by all
+  repositories. Every remote must emit `mf-manifest.json`. Remote entry
+  URLs must be resolved by the shared Module Federation runtime plugin,
+  not by hand-written script injection.
+- `TECH-155` — Every repository must build from the shared config package
+  `@smooth/web-build-config`, pinned to the same version in all
+  repositories.
+  - The shared-singleton map and the remote registry must exist only in
+    that package.
+  - A repository's `rspack.config.js` may declare only repository-specific
+    values.
+  - Changing the shared config is a versioned release of that package,
+    adopted by every repository.
+- `TECH-156` — Every repository must declare Node `>=22.12` in
+  `package.json` `engines` and in `.nvmrc`.
+- `TECH-157` — Every repository must provide a `typecheck` script
+  (`tsc --noEmit`) with `isolatedModules: true`, because SWC does not
+  type-check. `typecheck` is a required quality gate next to `build`.
+
+## Deployment and releases
+
+Decided 2026-11-12 to 2026-11-16. See `DEPLOYMENT.md` and
+`specs/active/release-orchestration/`.
+
+- `TECH-158` — Each repository version must be built **once**, without
+  client-specific or environment-specific values baked in for sandbox and
+  production. Per-client differences come only from runtime brand data and
+  the client entry page.
+- `TECH-159` — Versioned artifacts (`<repo>/<version>/`) are immutable. A
+  version must never be overwritten; a change is a new version.
+- `TECH-160` — Only the `smooth-web-release` pipelines may write client
+  entry pages (`clients/<slug>/index.html`), bundles, and client state. The
+  one exception: the host staging pipeline refreshes existing staging entry
+  pages.
+- `TECH-161` — A client can be deployed only if it is in `clients.json`
+  with `status: active`, lists the environment, and has
+  `configs/<slug>-brand.json` in that environment's assets bucket.
+- `TECH-162` — A bundle may be promoted to production only after it has
+  been promoted in sandbox. Production promotion and rollback require the
+  Bitbucket `production` deployment-group approval.
+- `TECH-163` — Every deploy, promote, and rollback must record who, when,
+  which bundle or channel, and which pipeline run in
+  `state/<env>/<slug>.json`, and must make exactly one CloudFront
+  invalidation.
+- `TECH-164` — All pipeline access to AWS must use the OIDC role
+  `V2WebOrderingDeploy`. No long-lived AWS keys may be stored in Bitbucket.
 
 ## Routing and code splitting
 
@@ -79,13 +137,13 @@ explicitly approved architectural decision.
 ## Design system
 
 - `TECH-142` — A component that may be reusable across repositories must
-  be created first in `smooth-web-settings-mfe`, classified as an atom,
+  be created first in `smooth-web-design-mfe`, classified as an atom,
   molecule, organism, layout, or template, before it is consumed by any
   remote or the host shell.
-- `TECH-143` — Every reusable component in `smooth-web-settings-mfe`'s
+- `TECH-143` — Every reusable component in `smooth-web-design-mfe`'s
   design system must have a Storybook story.
-- `TECH-144` — `smooth-web-settings-mfe` must expose its design-system
-  components through its `webpack.config.js` `ModuleFederationPlugin`
+- `TECH-144` — `smooth-web-design-mfe` must expose its design-system
+  components through its `rspack.config.js` Module Federation
   `exposes` configuration so the host and other remotes can consume them.
 - `TECH-145` — Before creating a new reusable component, the existing
   design system must be checked for an equivalent; an existing component
@@ -96,6 +154,19 @@ explicitly approved architectural decision.
 - `TECH-147` — Design-system components must be implemented using the
   shared, global MUI theme rather than component-local hardcoded style
   values.
+- `TECH-152` — `smooth-web-design-mfe` must contain only pure, reusable,
+  domain-free atomic-design components. This rule was added 2026-11-08; see
+  `EXECUTION_PLAN.md` Change 1. Its components, folders, props, and stories:
+  - must not be named after a business domain (location, menu, product,
+    offer, loyalty, order, payment, auth, user, and so on);
+  - must not embed domain business rules;
+  - must not access APIs or global state from `smooth-web-data-mfe`.
+
+  They receive all data through props. Domain-specific composition belongs
+  in the owning feature repository, such as `smooth-web-core-mfe`,
+  `smooth-web-payment-mfe`, or `smooth-web-auth-mfe`. The rule applies to
+  new and changed components. The existing structure and components were
+  accepted as they are on 2026-11-08.
 
 ## Forms and validation
 
@@ -140,7 +211,7 @@ explicitly approved architectural decision.
   `auth-stream.ts`); an existing stream must be migrated to a Redux Toolkit
   slice when an approved task touches it.
 - `TECH-132` — Every API slice and global-state slice defined in
-  `smooth-web-data-mfe` must be exposed through its `webpack.config.js`
+  `smooth-web-data-mfe` must be exposed through its `rspack.config.js`
   `ModuleFederationPlugin` `exposes` configuration so other `smooth-web-*`
   repositories can consume it.
 - `TECH-133` — A consuming repository must not define its own duplicate API
@@ -242,7 +313,7 @@ explicitly approved architectural decision.
   optimized.
 - `TECH-042` — A feature that materially changes bundle size or loading behavior
   must document the impact in `IMPACT.md`.
-- `TECH-043` — The Vite production build must preserve route-level code splitting
+- `TECH-043` — The Rspack production build must preserve route-level code splitting
   and must not eagerly import lazy route implementation modules elsewhere.
 
 ## Security and privacy

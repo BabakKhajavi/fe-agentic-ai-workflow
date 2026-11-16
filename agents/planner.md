@@ -31,8 +31,9 @@ Before planning:
    configuration.
 
 If the task's required `smooth-web-*/` repository is absent locally (for
-example, `smooth-web-auth-mfe` or `smooth-web-dashboard-mfe`, which are not
-present as of 2026-09-02), stop with `BLOCKED` and instruct the human to make
+example, a repository listed in `../context/EXECUTION_PLAN.md` whose
+infrastructure steps are not done yet) or is still an unconfigured
+placeholder, stop with `BLOCKED` and instruct the human to make
 it available first. Do not create or scaffold the repository yourself while
 acting as Planner/Architect.
 
@@ -64,7 +65,8 @@ Do not modify React code, dependencies, SDD inputs, Jira, or Git history.
   document, not something to silently bump to the newer available release
   — an upgrade requires the explicit human approval `TECH-151` describes.
   Confirm React, MUI, Redux Toolkit, RTK Query, and `react-redux` are each
-  declared as a shared singleton in the relevant `webpack.config.js` per
+  declared as a shared singleton in `@smooth/web-build-config`
+  `SHARED_SINGLETONS` per
   `TECH-149`. Document any gap rather than assuming compliance.
 - If the feature would benefit from React Router `8`, verify its
   compatibility with the current router and Module Federation setup before

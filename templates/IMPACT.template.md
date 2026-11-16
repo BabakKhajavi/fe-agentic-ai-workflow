@@ -15,7 +15,7 @@
 | Concern | Observed implementation | Version or evidence | Alignment |
 | --- | --- | --- | --- |
 | React and TypeScript | <observed> | <package/file> | <Aligned/Gap> |
-| Webpack / Module Federation | <observed> | <package/file> | <Aligned/Gap> |
+| Rspack / Module Federation 2 / shared build config | <observed> | <package/file> | <Aligned/Gap> |
 | Routing and lazy loading | <observed> | <file> | <Aligned/Gap> |
 | MUI theme and styling | <observed> | <file> | <Aligned/Gap> |
 | Formik 2 and Yup | <observed> | <package/file> | <Aligned/Gap/Not used> |

@@ -61,14 +61,14 @@ The Developer Agent may:
 - Modify files under the relevant `../../smooth-web/smooth-web-*/` repository
   required by the selected task.
 - Create a new reusable component, or reuse an existing one, in
-  `smooth-web-settings-mfe`'s design system when the selected task needs a
+  `smooth-web-design-mfe`'s design system when the selected task needs a
   component that may be reusable beyond its own feature — even when
-  `smooth-web-settings-mfe` is not the task's primary repository. See
+  `smooth-web-design-mfe` is not the task's primary repository. See
   "Components" below for the required procedure.
 - Add or update dependencies explicitly approved by `IMPACT.md` and `PLAN.md`.
   Never install a different major/minor version of a shared singleton
   (React, MUI, Redux Toolkit, RTK Query, `react-redux`, React Router) than
-  the version declared in the host's `webpack.config.js` `shared` config.
+  the version declared in `@smooth/web-build-config` `SHARED_SINGLETONS`.
 - Add tests, mocks, fixtures, and configuration required by the selected task.
 - Make a small necessary adjacent change when it is unavoidable, clearly report
   it, and show why it remains within approved scope.
@@ -87,7 +87,9 @@ The Developer Agent must not:
 ### React and routing
 
 - Use React and TypeScript with the repository's configured build setup
-  (Webpack + Module Federation for `smooth-web-*/`).
+  (Rspack 2 + Module Federation 2 for `smooth-web-*/`, from the shared
+  `@smooth/web-build-config`; see `TECH-153`–`TECH-157`). Change shared
+  build behaviour only in `smooth-web-build-config`.
 - Keep route modules lazy-loaded and preserve route-level code splitting.
 - Provide accessible loading and recoverable error states for affected routes.
 
@@ -116,16 +118,16 @@ the feature that needs it right now (a generic button, field, card, modal,
 page layout, etc., as opposed to something with feature-specific business
 logic).
 
-1. If it may be reusable, first check `smooth-web-settings-mfe`'s existing
+1. If it may be reusable, first check `smooth-web-design-mfe`'s existing
    design system (atoms, molecules, organisms, layouts, templates) for an
    equivalent component.
 2. If a suitable component already exists, consume it as exposed by
-   `smooth-web-settings-mfe`'s `webpack.config.js` — do not recreate it in
+   `smooth-web-design-mfe`'s `rspack.config.js` — do not recreate it in
    the task's repository.
-3. If no suitable component exists, create it in `smooth-web-settings-mfe`
+3. If no suitable component exists, create it in `smooth-web-design-mfe`
    first, in the correct atomic-design category, built from the shared MUI
    theme, with a Storybook story, and expose it through that repository's
-   `webpack.config.js`. Only then consume it from the task's actual
+   `rspack.config.js`. Only then consume it from the task's actual
    repository.
 4. If an existing shared component needs to change and the change could
    affect its current consumers (changed prop type, removed prop, or
@@ -135,7 +137,15 @@ logic).
    additive, backward-compatible change does not require asking.
 5. If a component is feature-specific business logic wearing a generic
    shape, keep it in the feature's own `components/`; do not move it to
-   `smooth-web-settings-mfe` just because it looks reusable.
+   `smooth-web-design-mfe` just because it looks reusable.
+6. Anything added to `smooth-web-design-mfe` must be domain-free
+   (`TECH-152`):
+   - no business-domain names in components, folders, props, or stories;
+   - no API or global-state access;
+   - no business rules.
+
+   Extract the generic part into the design system. Compose the
+   domain-specific version in the owning feature repository.
 
 ### MUI
 
@@ -166,7 +176,7 @@ logic).
 - Do not copy RTK Query results into component state or ordinary Redux slices.
 - `smooth-web-data-mfe` owns every API slice (`apis/<feature-name>/`,
   named `<feature-name>-api-slice`) and every global-state slice, exposed
-  through its `webpack.config.js`. If the task is in a different repository
+  through its `rspack.config.js`. If the task is in a different repository
   and needs new or changed shared state or API access, implement it in
   `smooth-web-data-mfe` and expose it there — do not add a duplicate slice
   in the consuming repository. If that is out of scope for the selected
@@ -227,7 +237,7 @@ logic).
 6. Run the task-specific tests first.
 7. Run the repository's available `typecheck`, `lint`, `test`, and `build`
    scripts when the task is ready for review.
-8. Inspect the Webpack build output when the task affects lazy-loaded routing or
+8. Inspect the Rspack build output when the task affects lazy-loaded routing or
    bundle behavior.
 9. Fix in-scope failures and rerun the relevant checks.
 
@@ -242,7 +252,7 @@ Return a concise implementation report containing:
 - Jira issue and `TASK-*` identifier.
 - Source branch confirmed with the human and the created task branch name.
 - Files created, modified, and intentionally reused.
-- Any `smooth-web-settings-mfe` design-system component created or reused,
+- Any `smooth-web-design-mfe` design-system component created or reused,
   and any shared-component change a human approved mid-task.
 - Requirement, acceptance-criteria, and contract coverage.
 - Tests added or updated.

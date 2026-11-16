@@ -22,17 +22,17 @@ Open it directly in a browser; it is not rendered by this Markdown viewer.
 
 ## React application architecture
 
-> **Unresolved conflict (2026-09-02):** everything below in "Technology
-> baseline" and "Source organization" describes a single Vite application,
-> written before `smooth-web` existed as the implementation target.
-> `smooth-web` is actually five separate repositories built on Webpack with
-> Module Federation (see "Module federation structure" below), not a single
-> Vite app. This is a real architecture disagreement, not a naming issue —
-> per this workspace's rule to stop and ask when sources disagree, do not
-> silently apply this baseline to `smooth-web`. A human must decide whether
-> to rewrite this baseline for the MFE reality or keep it for a future
-> single-app scope, before agents plan or implement features against
-> `smooth-web`.
+> **Build baseline resolved (2026-11-11):** the user decided that
+> `smooth-web` builds with **Rspack 2 and Module Federation 2**, using one
+> shared build config (see "Build tooling and shared config" below and
+> `specs/active/rspack-mf2-migration/`). This replaces both the earlier
+> single-app Vite baseline and the current Webpack 5 setup.
+>
+> - Until that feature's tasks land, the repositories still contain
+>   `webpack.config.js`.
+> - New work must follow the Rspack baseline.
+> - "Source organization" below was written for a single application.
+>   Apply it inside each repository, not across the federation.
 
 ### Technology baseline
 
@@ -43,7 +43,14 @@ The proof-of-concept application will use:
   policy — see `TECHNICAL_REQUIREMENTS.md` `TECH-148` for the exact
   versions. This is a hard pin, not a "track latest" policy; changing one
   requires an explicit, separately approved decision.
-- Vite for local development and production builds.
+- Rspack 2 (`@rspack/core`, `@rspack/cli`, `@rspack/dev-server`) for local
+  development and production builds:
+  - TypeScript and JSX are compiled by Rspack's built-in SWC loader;
+  - Module Federation 2 comes from `@module-federation/enhanced/rspack`;
+  - all six repositories build from the shared config
+    `@smooth/web-build-config`;
+  - Node 22 (`>=22.12`).
+  Decided 2026-11-11.
 - React Router `8` with lazy-loaded route modules for client-side
   navigation, **if confirmed compatible** with `smooth-web-app`'s current
   routing and Module Federation setup (see the open question below);
@@ -53,9 +60,9 @@ The proof-of-concept application will use:
 - Redux Toolkit for global client state.
 - RTK Query for API access, server-state caching, and cache invalidation.
 - Jest and React Testing Library for automated component and behavior
-  tests (confirmed 2026-09-11 for `smooth-web`; this was previously
-  written as Vitest, which assumes the Vite build tool — see the
-  unresolved Vite-vs-Webpack conflict noted above).
+  tests (confirmed 2026-09-11 for `smooth-web`; previously written as
+  Vitest. Jest is independent of the bundler, so the Rspack decision does
+  not change it).
 - MSW (Mock Service Worker) for mocking API responses in tests instead of
   mocking `fetch` or RTK Query internals directly.
 - ESLint and TypeScript checking as required quality gates.
@@ -74,34 +81,108 @@ see `TECH-150`.
 
 ### Module federation structure
 
-`smooth-web` is five sibling repositories, not one application:
+The target `smooth-web` is six sibling repositories, not one application
+(decided 2026-11-08; see `EXECUTION_PLAN.md` Change 1):
 
 ```text
 smooth-web/
-├── smooth-web-app/           # host shell — Webpack + ModuleFederationPlugin
-├── smooth-web-data-mfe/      # remote: smooth_data
-├── smooth-web-design-mfe/    # remote: smooth_ui
-├── smooth-web-menu-mfe/      # remote: smooth_menu
-└── smooth-web-settings-mfe/  # remote: smooth_settings
+├── smooth-web-app/          # host shell — shell, sidebar, app bar, routing, white-labeling
+├── smooth-web-data-mfe/     # remote: smooth_data — all APIs, global state, config
+├── smooth-web-design-mfe/   # remote: smooth_ui — all reusable components
+├── smooth-web-core-mfe/     # remote: smooth_core — Locations, Menu, Offers, Orders
+├── smooth-web-payment-mfe/  # remote: smooth_payment — all payment features
+└── smooth-web-auth-mfe/     # remote: smooth_auth — whole authentication flow and its components
 ```
 
-The host's `webpack.config.js` also declares `smooth_auth`
-(`smooth-web-auth-mfe`) and `smooth_dashboard` (`smooth-web-dashboard-mfe`) as
-remotes, but neither repo was present locally as of 2026-09-02 — confirm
-their status with the user rather than assuming they don't exist or building
-against them.
+**Current state does not match the target yet (inspected 2026-11-08):**
 
-Each repo is independently versioned and independently deployed behind
-`getMfeBaseUrl(...)`. Shared singletons are declared in the host's `shared`
-config — check it before assuming a dependency can float independently in
-a remote.
+- `smooth-web-core-mfe` was scaffolded locally on 2026-11-08. It has no
+  commits, no Bitbucket remote yet, and dev port 9007.
+- The old local `smooth-web-menu-mfe`, `-location-mfe`, `-offers-mfe`,
+  and `-order-mfe` folders were removed on 2026-11-08. Their scope moves to
+  `smooth-web-core-mfe`.
+- The local `smooth-web-payment-mfe` and `smooth-web-auth-mfe` folders still
+  carry another repository's git remote and federation name. They must
+  become `smooth_payment` and `smooth_auth`.
+- The host's `webpack.config.js` still declares `smooth_dashboard`,
+  `smooth_settings`, and `smooth_menu`, and has no core or payment remote.
+
+Do not plan feature work against `smooth-web-core-mfe` or
+`smooth-web-payment-mfe` until the infrastructure steps in
+`EXECUTION_PLAN.md` are approved and done.
+
+Each repository is versioned and deployed independently. Remote URLs come
+from the remote registry in `@smooth/web-build-config`. At runtime they are
+resolved by its Module Federation 2 runtime plugin, which applies the
+release manifest's version or falls back to the environment base URL. This
+replaces the hand-written `createPromiseRemote`/`getMfeBaseUrl` helpers.
+Shared singletons are declared once in the shared config. Check it before
+assuming a dependency can float independently in a remote.
 
 React, MUI, Redux Toolkit, RTK Query, `react-redux`, and React Router
 (once/if adopted) must all be declared as shared singletons
-(`singleton: true` with a pinned `requiredVersion`) in every repository's
-`webpack.config.js` `ModuleFederationPlugin` `shared` configuration, at the
+(`singleton: true` with a pinned `requiredVersion`) in
+`@smooth/web-build-config` `SHARED_SINGLETONS` (consumed by every repository's `rspack.config.js`), at the
 versions in "Technology baseline" above, so exactly one instance of each
 loads across the host and every remote. See `TECH-148` through `TECH-151`.
+
+### Build tooling and shared config
+
+Decided 2026-11-11. Spec: `specs/active/rspack-mf2-migration/`.
+
+- **Bundler:** Rspack 2, with the built-in SWC loader, `HtmlRspackPlugin`,
+  `@rspack/plugin-react-refresh`, and built-in CSS. Babel is not used for
+  builds.
+- **Federation:** Module Federation 2, from
+  `@module-federation/enhanced/rspack`, at one exact version shared by all
+  repositories.
+  - Every remote emits `remoteEntry.js` and `mf-manifest.json`.
+  - Consumers reference remotes through `mf-manifest.json`.
+- **Shared config:** `@smooth/web-build-config`, in the tooling repository
+  `smooth-web-build-config`. It owns:
+  - the base Rspack config (`createSmoothRspackConfig`);
+  - the shared-singleton map (`SHARED_SINGLETONS`);
+  - the remote registry (`REMOTES`: federation names, ports, environment
+    base URLs);
+  - the remote-resolver runtime plugin.
+
+  Each repository's `rspack.config.js` declares only its own values: kind,
+  name, port, entry, exposes, remotes, HTML, and defines.
+- **Runtime remote resolution** is the foundation of the per-client release
+  loader (Execution Plan AD-2.7). A runtime plugin rewrites remote entries
+  from the release manifest before the remotes initialise, so a client can
+  be pinned or rolled back without rebuilding.
+- **Typing:** SWC does not type-check, so every repository has a `typecheck`
+  script (`tsc --noEmit`) with `isolatedModules: true`. Federated type
+  generation replaces the `declare module 'smooth_*/…'` stubs, if adopted
+  (`DEC-003` in the spec).
+
+See `TECHNICAL_REQUIREMENTS.md` `TECH-153` through `TECH-157`.
+
+### Deployment and per-client releases
+
+Decided 2026-11-12 to 2026-11-16. The full description and onboarding
+steps are in `DEPLOYMENT.md`.
+
+- **Build once, share everywhere.** Each repository version is built once
+  and shared by all clients. Branding is runtime data
+  (`/configs/<slug>-brand.json`), never baked into a build.
+- **Each client has its own entry page,** `clients/<slug>/index.html`, in
+  each environment's app bucket. The CloudFront Function
+  `client-entry-rewrite` serves it for `/<slug>/…`.
+  - In **staging**, the entry page is a copy of the latest shell.
+  - In **sandbox and production**, it is the bundle's shell HTML with
+    `window.__SMOOTH_CLIENT_RELEASE__` inlined, which pins every remote's
+    version through the Module Federation runtime resolver.
+- **Package pipelines build and publish code; `smooth-web-release` decides
+  which client runs which code.**
+  - `deploy-staging`, `create-bundle`, `promote-*`, `rollback-*`;
+  - client selection from `clients.json`;
+  - state committed to `state/<env>/<slug>.json`.
+- **Production only receives tested bundles.** A bundle must already be in
+  sandbox, the deployment group must approve, and rollback never rebuilds.
+
+See `TECHNICAL_REQUIREMENTS.md` `TECH-158`–`TECH-164`.
 
 ### Data and global state ownership (`smooth-web-data-mfe`)
 
@@ -116,10 +197,11 @@ client state for the whole federated application:
   Redux Toolkit slices instead, registered in the shared Redux store
   alongside the RTK Query API slices.
 - Both kinds of slices are exposed from `smooth-web-data-mfe`'s
-  `webpack.config.js` `ModuleFederationPlugin` `exposes` entry so the host
+  `rspack.config.js` `exposes` entry (Module Federation 2) so the host
   and other remotes can consume them.
-- A consuming repository (`smooth-web-app`, `smooth-web-menu-mfe`,
-  `smooth-web-design-mfe`, `smooth-web-settings-mfe`) must not define its
+- A consuming repository (`smooth-web-app`, `smooth-web-core-mfe`,
+  `smooth-web-payment-mfe`, `smooth-web-auth-mfe`,
+  `smooth-web-design-mfe`) must not define its
   own copy of state or API access already owned by `smooth-web-data-mfe`. It
   wraps the imported slice in its own feature-specific custom hook, and
   components consume only that hook — never the imported slice directly.
@@ -139,20 +221,29 @@ Federation requires state libraries like `redux`/`react-redux` to be shared
 singletons; confirm the store's instantiation point and its `shared` config
 entry with a human before a Planner/Architect Agent relies on it.
 
-### Design system ownership (`smooth-web-settings-mfe`)
+### Design system ownership (`smooth-web-design-mfe`)
 
-`smooth-web-settings-mfe` is the single owner of the shared, reusable
+`smooth-web-design-mfe` is the single owner of the shared, reusable
 component library for the whole federated application, built with atomic
 design:
 
+- It is **pure and domain-free** (`TECH-152`, decided 2026-11-08):
+  - No component, folder, or prop is named after a business domain.
+  - It contains no business rules.
+  - It does not access APIs or global state.
+
+  Domain-specific composition belongs in the owning feature repository
+  (`smooth-web-core-mfe`, `smooth-web-payment-mfe`, `smooth-web-auth-mfe`,
+  or `smooth-web-app`).
+
 - Every component that may be reusable beyond the feature that first needs
-  it must be created in `smooth-web-settings-mfe`, classified as an atom,
+  it must be created in `smooth-web-design-mfe`, classified as an atom,
   molecule, organism, layout, or template, before it is consumed anywhere
   else.
 - Every component in this design system has a Storybook (`storybook.js`)
   story.
-- These components are exposed from `smooth-web-settings-mfe`'s
-  `webpack.config.js` `ModuleFederationPlugin` `exposes` entry so the host
+- These components are exposed from `smooth-web-design-mfe`'s
+  `rspack.config.js` `exposes` entry (Module Federation 2) so the host
   shell and every remote can consume them.
 - Before creating a new reusable component, check the existing design
   system for an equivalent. Reuse it rather than creating a duplicate.
@@ -166,7 +257,7 @@ design:
   already defines.
 
 This is a separate ownership boundary from `smooth-web-data-mfe` (data/
-state, above): `smooth-web-settings-mfe` owns shared **presentation**
+state, above): `smooth-web-design-mfe` owns shared **presentation**
 (components), `smooth-web-data-mfe` owns shared **data and state**. A
 consuming repository composes the two through its own feature-specific
 hooks and containers.
@@ -245,15 +336,15 @@ Each feature follows the container/representational pattern:
   that repository's `src/components/`; feature-specific components stay
   with their feature. A component that may be reusable across
   repositories belongs in the shared atomic design system owned by
-  `smooth-web-settings-mfe` instead (see "Design system ownership"
+  `smooth-web-design-mfe` instead (see "Design system ownership"
   below) — create it there first, then consume it via Module Federation.
 - Business rules should be extracted into testable hooks or pure functions when
   embedding them in JSX would obscure behavior.
 
 ### Routing and lazy loading
 
-- Route implementation modules are loaded lazily and form route-level Vite
-  chunks.
+- Route implementation modules are loaded lazily and form route-level
+  Rspack chunks.
 - The application shell, Redux provider, MUI theme provider, router, error
   boundary, and route-loading fallback are composed under `src/app/`.
 - Lazy route modules must not be eagerly imported by the shell or route table.
@@ -468,14 +559,13 @@ Approval must be explicit and recorded. The absence of feedback is not approval.
 
 ### React application lifecycle
 
-`smooth-web/` already exists as five independently versioned repositories
+`smooth-web/` already exists as six independently versioned repositories
 (see "Module federation structure" above), so there is no bootstrap step.
 Agents must inspect the specific `smooth-web-*/` repository (or repositories)
 named by the task's Jira issue — its current structure, installed
 dependencies, and conventions — before planning or implementing a feature.
-Do not assume the Vite/single-app technology baseline above applies until the
-unresolved conflict noted at the top of this document is resolved by a
-human.
+Apply the Rspack + Module Federation 2 baseline above, and read "Source
+organization" per repository.
 
 ### Integration principle
 

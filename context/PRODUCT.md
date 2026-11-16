@@ -13,30 +13,31 @@ menu, look and feel, and operational settings — running on the same shared
 platform rather than a separate codebase per client. This is reflected in how
 `smooth-web` is decomposed into independently deployed micro-frontends behind
 a Module Federation host (see `ARCHITECTURE.md` for the technical structure
-and the unresolved Vite-vs-MFE baseline conflict):
+and its Rspack + Module Federation 2 build baseline):
 
-- `smooth-web-app` — host shell that composes the client experience.
-- `smooth-web-menu-mfe` — menu browsing and ordering.
-- `smooth-web-design-mfe` — per-client storefront branding/presentation.
-- `smooth-web-data-mfe` — server-data access and global client state, owned
-  and exposed for every repository to consume (confirmed; see
-  `ARCHITECTURE.md` "Data and global state ownership").
-- `smooth-web-settings-mfe` — confirmed by the user (2026-09-11) to host
-  the shared, cross-repository atomic-design component library (atoms,
-  molecules, organisms, layouts, templates), exposed for the host and every
-  remote to consume — despite the repo name, this is not primarily a
-  "settings" feature. See `ARCHITECTURE.md` "Design system ownership."
-- `smooth-web-auth-mfe`, `smooth-web-dashboard-mfe` — declared as remotes by
-  the host but not present locally as of 2026-09-02; do not assume their
-  scope without confirmation.
+The structure below was decided by the user on 2026-11-08 and replaces the
+earlier inferred mapping. See `EXECUTION_PLAN.md` Change 1.
 
-**Assumption, not yet confirmed:** the mapping above for `smooth-web-app`,
-`smooth-web-menu-mfe`, and `smooth-web-design-mfe` is inferred from
-repository names and directory structure only (`smooth-web-data-mfe` and
-`smooth-web-settings-mfe` have since been confirmed directly, above). The
-remaining inferred entries have not been confirmed against a product owner
-or Confluence source and must be treated as a labeled assumption until
-verified.
+- `smooth-web-app` — host shell: shell, sidebar, app bar, routing, and
+  white-labeling.
+- `smooth-web-data-mfe` — all APIs, global state, and config, owned and
+  exposed for every repository to consume (see `ARCHITECTURE.md` "Data and
+  global state ownership").
+- `smooth-web-design-mfe` — all reusable components, as the shared
+  atomic-design component library (see `ARCHITECTURE.md` "Design system
+  ownership"). It takes over this role from the retired
+  `smooth-web-settings-mfe`.
+- `smooth-web-core-mfe` — the core ordering domains:
+  - Locations: location selection, map, pickup, delivery, drop-off.
+  - Menu: categories; products (options, favourites, upsell); combos.
+  - Offers: offers, loyalty, how it works, promo code, credit.
+  - Orders: order settings, order status, order history, order again.
+- `smooth-web-payment-mfe` — payment methods, gift cards, tips.
+- `smooth-web-auth-mfe` — the whole authentication flow and its components.
+  Its APIs come from `smooth-web-data-mfe`.
+
+`smooth-web-menu-mfe`, `smooth-web-settings-mfe`, and
+`smooth-web-dashboard-mfe` are no longer part of the target structure.
 
 Publicly, Smooth Commerce (smooth.tech) describes itself as an all-in-one
 digital ordering, customer marketing, and loyalty platform: pickup and

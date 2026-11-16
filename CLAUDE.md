@@ -20,12 +20,31 @@ just produce code quickly.
 - `templates/` contains reusable templates for generated artifacts.
 - `../smooth-web/` contains the React application, split across sibling
   repositories:
-  - `smooth-web-app` — host shell (Webpack + Module Federation).
-  - `smooth-web-data-mfe`, `smooth-web-design-mfe`, `smooth-web-menu-mfe`,
-    `smooth-web-settings-mfe` — remote micro-frontends.
-  - The host also declares `smooth-web-auth-mfe` and
-    `smooth-web-dashboard-mfe` as remotes; these were not present locally as
-    of 2026-09-02. Confirm with the user before assuming they don't exist.
+  - Target structure (decided 2026-11-08; see `context/EXECUTION_PLAN.md`
+    Change 1):
+    - `smooth-web-app` — host shell (Rspack 2 + Module Federation 2): shell,
+      sidebar, app bar, routing, white-labeling.
+    - `smooth-web-data-mfe` — all APIs, global state, config.
+    - `smooth-web-design-mfe` — all reusable components (design system).
+    - `smooth-web-core-mfe` — Locations, Menu, Offers, Orders.
+    - `smooth-web-payment-mfe` — payment methods, gift cards, tips.
+    - `smooth-web-auth-mfe` — the whole authentication flow and its
+      components (APIs still come from `smooth-web-data-mfe`).
+  - `smooth-web-core-mfe` was scaffolded locally on 2026-11-08 and has no
+    Bitbucket remote yet. The old local `menu`,
+    `location`, `offers`, and `order` MFE folders were removed on 2026-11-08.
+    `smooth-web-auth-mfe` and `smooth-web-payment-mfe` are placeholder copies
+    that still carry another repo's git remote. See
+    `context/EXECUTION_PLAN.md`.
+  - `smooth-web-build-config` is a tooling package, not an MFE. It holds
+    the shared Rspack and Module Federation 2 config that every repository
+    builds from (`TECH-155`). It is created by
+    `specs/active/rspack-mf2-migration/`.
+  - `smooth-web-release` holds per-client release orchestration, not an
+    MFE. It contains the client registry (`clients.json`), bundles,
+    per-environment client state, and the `deploy` (staging), `create-bundle`,
+    `promote`, and `rollback` pipelines. The app repositories only build and
+    publish code. Scaffolded 2026-11-16.
   - Each subdirectory is its own git repository. A feature task typically
     touches only the repo(s) named in its Jira issue — do not assume changes
     span all five.
@@ -36,6 +55,9 @@ Before planning or implementing application changes, read:
 - `context/TECHNICAL_REQUIREMENTS.md`
 - `context/ENGINEERING_STANDARDS.md`
 - `context/ARCHITECTURE.md`
+- `context/EXECUTION_PLAN.md`
+- `context/DEPLOYMENT.md` when work touches builds, pipelines, AWS, client
+  onboarding, or branding
 - `context/JIRA.md` when reading or writing Jira work
 
 ## Sources of truth
